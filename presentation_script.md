@@ -1,72 +1,95 @@
-# DocuMind: Enterprise RAG System Presentation Script
+# DocuMind: Code-Level Technical Deep Dive
 
-## Slide 1: Introduction
-**Speaker:**
-"Good morning/afternoon everyone. Today I'd like to present **DocuMind**, an intelligent document question-answering system we've built.
-
-The core problem we addressed is that traditional 'Ctrl+F' keyword search fails for complex enterprise documents. It misses context and can't answer semantic questions like 'What is the policy for remote work?'.
-
-DocuMind is a **Retrieval-Augmented Generation (RAG)** system that allows users to chat with their PDF documents naturally, providing accurate, cited, and trustworthy answers."
+**Format:** This presentation is designed as a live code walkthrough. Open your IDE to the project folder and follow the script below, pointing to the specific files and lines mentioned.
 
 ---
 
-## Slide 2: The Tech Stack
-**Speaker:**
-"To build this, we used a modern, open-source friendly stack centered around Python:
+## 1. Introduction & Tech Stack
+**Action:** Open `requirements.txt` or `ingestion.py` (top imports).
 
-*   **LangChain:** This is our orchestration framework. It handles the glue logic between our documents, the database, and the AI model.
-*   **Unstructured.io:** We use this for robust PDF processing. It doesn't just grab text; it understands document layout, which is crucial for enterprise files.
-*   **Pinecone:** This is our Serverless Vector Database. It stores the 'semantic meaning' of our data, allowing for lightning-fast retrieval of relevant information.
-*   **HuggingFace (`all-MiniLM-L6-v2`):** This is our embedding model. It runs locally and converts text into numerical vectors.
-*   **Ollama (Llama 3):** For the intelligence layer, we are using a local instance of Llama 3 via Ollama. This ensures data privacy and zero inference costs."
+**Speaker:**
+"Hello everyone. Today I will walk you through the codebase of **DocuMind**, our Enterprise RAG system. We built this using a modern Python stack.
+
+If we look at our imports in `ingestion.py` (Lines 1-9), you can see the core technologies:
+*   **LangChain**: For orchestration.
+*   **Pinecone**: Our vector database for storing semantic data.
+*   **Unstructured**: For heavy-duty PDF parsing.
+*   **HuggingFace**: For generating embeddings locally."
 
 ---
 
-## Slide 3: Architecture Overview
-**Speaker:**
-"Our system operates in two distinct pipelines:
-1.  **Ingestion Pipeline:** Prepares the data.
-2.  **Retrieval Engine:** Answers the questions.
+## 2. The Ingestion Pipeline (`ingestion.py`)
+**Action:** Open `ingestion.py`.
 
-Let's break them down."
+### Step 1: Loading Documents
+**Action:** Scroll to `class DocumentLoader` (Line 20) and specifically **Line 40**.
+
+**Speaker:**
+"The process starts here. We use `UnstructuredPDFLoader` with `strategy='fast'`.
+*   **Why?** Standard loaders just dump text. Unstructured helps us preserve metadata.
+*   **Look at Lines 53-54:** We explicitly capture the `page_number`. This is crucial because our system needs to cite exactly where information comes from."
+
+### Step 2: Chunking Strategy
+**Action:** Scroll to `class ContentProcessor` (Lines 63-70).
+
+**Speaker:**
+"Once loaded, we don't just shove text into the database. We use the `RecursiveCharacterTextSplitter`.
+*   **Line 66 (`chunk_size=1000`):** We split text into 1000-character blocks.
+*   **Line 67 (`chunk_overlap=200`):** We keep a 200-character overlap. This ensures that if a sentence is split between two chunks, the context isn't lost. The model sees the connection."
+
+### Step 3: Vector Storage
+**Action:** Scroll to `upsert_chunks` method (Line 144) and specifically **Lines 160-190**.
+
+**Speaker:**
+"Here is where the magic happens.
+1.  **Line 161:** We take the text content.
+2.  **Line 163:** We use `self.embeddings.embed_documents(texts)` to convert that text into a list of floating-point numbers (vectors).
+3.  **Line 189:** We send these vectors to Pinecone. Note that we also send the **Metadata** (Page number, Source file) so we can retrieve it later."
 
 ---
 
-## Slide 4: The Ingestion Pipeline (Step-by-Step)
-**Speaker:**
-"First, how do we get data *in*? We built a robust ingestion script (`ingestion.py`):
+## 3. The Retrieval Engine (`retrieval.py`)
+**Action:** Open `retrieval.py`.
 
-1.  **Loading:** We iterate through a directory of PDFs. We use `UnstructuredPDFLoader` with a 'fast' strategy to extract text while explicitly tracking metadata like **Page Numbers**. This is critical for citations later.
-2.  **Cleaning:** We apply a cleaning layer to normalize whitespace and remove noise.
-3.  **Chunking:** We use the `RecursiveCharacterTextSplitter`. Instead of arbitrarily cutting text, we split it into 1000-character chunks with a 200-character overlap. This ensures that sentences aren't cut in half and context is preserved.
-4.  **Embedding & Storage:** These chunks are converted into vectors using our HuggingFace model and upserted into **Pinecone**, along with their metadata (Filename, Page Number)."
+### Step 1: The Brain (LLM Setup)
+**Action:** Scroll to `__init__` (Line 27).
+
+**Speaker:**
+"For the reasoning engine, we are using **Ollama** running **Llama 3**.
+*   **Line 27:** `ChatOllama(model='llama3', temperature=0)`.
+*   We set `temperature=0` to make the model deterministic. We don't want it to be creative; we want it to be factual."
+
+### Step 2: History Awareness
+**Action:** Scroll to `get_history_aware_query` (Line 91).
+
+**Speaker:**
+"A major challenge in RAG is chat history. If I ask 'matches?' after asking about 'vacation policy', a standard search fails.
+*   **Line 105:** We use a LangChain chain here (`prompt | llm`).
+*   **Logic:** It takes the chat history and rewrites the user's question to be self-contained *before* we search the database."
+
+### Step 3: Confidence Gating (Safety)
+**Action:** Scroll to `get_relevant_context` (Line 29) -> **Lines 43-51**.
+
+**Speaker:**
+"This is our safety layer.
+*   **Line 46:** We check `if match['score'] >= SIMILARITY_THRESHOLD`.
+*   If the retrieved documents aren't similar enough (below 50%), we simply ignore them. This prevents the model from trying to answer questions using irrelevant data."
+
+### Step 4: The Strict System Prompt
+**Action:** Scroll to `get_system_prompt` (Line 69).
+
+**Speaker:**
+"Finally, this is the instruction manual for our AI.
+*   **Rules 1-3:** We explicitly tell it: 'If you don't know, say you don't know.' and 'DO NOT use your own knowledge.'
+*   **Rule 4:** We mandate citations: `Format: (Source: [filename], Page: [number])`.
+This ensures that every answer DocuMind gives is grounded in your actual documents."
 
 ---
 
-## Slide 5: The Retrieval Engine (The "Brain")
+## 4. Conclusion
 **Speaker:**
-"Once data is indexed, users can ask questions using our engine (`retrieval.py`):
+"So, referencing the code:
+1.  `ingestion.py` handles the ETL (Extract, Transform, Load) process.
+2.  `retrieval.py` manages the semantic search and strict generation.
 
-1.  **History Awareness:** If a user asks a follow-up question like 'What about the second option?', raw search fails. We implemented a **Query Rewriter** that looks at the chat history and transforms that vague question into a specific search query.
-2.  **Semantic Search:** We search Pinecone for the top 5 most similar chunks to the user's question.
-3.  **Confidence Gating:** This is a key safety feature. If the most relevant document has a similarity score below **50% (0.50)**, the system immediately refuses to answer. This prevents the model from hallucinating specific answers from irrelevant documents."
-
----
-
-## Slide 6: Generating Trustworthy Answers
-**Speaker:**
-"Finally, we generate the answer. We use a **Strict System Prompt** for Llama 3.
-We enforce three rules:
-1.  Answer **ONLY** using the provided context.
-2.  If you don't know, say 'I don't know'. **Do not make things up.**
-3.  **Cite your sources.**
-
-Every answer DocuMind provides includes the exact filename and page number where the information was found, creating a fully auditable trail."
-
----
-
-## Slide 7: Conclusion
-**Speaker:**
-"In summary, DocuMind is not just a chatbot. It is a strictly controlled, history-aware, and auditable research assistant providing Enterprise-grade reliability using open-source tools.
-
-Thank you."
+This code structure gives us a verifiable, enterprise-grade Q&A system."
