@@ -1,0 +1,12 @@
+langchain
+langchain-huggingface
+langchain-huggingface
+sentence-transformers
+langchain-ollama
+langchain-community
+unstructured[pdf]
+pinecone
+python-dotenv
+tiktoken
+pypdf
+openai
