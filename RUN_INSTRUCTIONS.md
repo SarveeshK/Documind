@@ -40,14 +40,14 @@ PINECONE_ENV=us-east-1
 ## 4. Run Ingestion (Week 1 Logic)
 This process loads your PDFs, cleans them, chunks them, and uploads vectors to Pinecone.
 ```powershell
-.\.venv\Scripts\python ingestion.py
+.\.venv\Scripts\python src/ingestion.py
 ```
 *Wait for it to say "Ingestion Pipeline Complete."*
 
 ## 5. Run Retrieval (Week 2 Logic)
 This launches the interactive chat CLI.
 ```powershell
-.\.venv\Scripts\python retrieval.py
+.\.venv\Scripts\python src/retrieval.py
 ```
 *   **Type your question** (e.g., "What is the remote work policy?").
 *   **Check the output** for the answer AND the citations (Source + Page).

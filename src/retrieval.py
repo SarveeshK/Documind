@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import List, Dict, Any
 from dotenv import load_dotenv
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -10,7 +11,8 @@ from langchain_core.runnables import RunnablePassthrough, RunnableBranch
 from pinecone import Pinecone
 
 # Load environment variables
-load_dotenv()
+ROOT_DIR = Path(__file__).parent.parent
+load_dotenv(ROOT_DIR / ".env")
 
 # Configuration
 INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")

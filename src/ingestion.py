@@ -1,6 +1,7 @@
 import os
 import time
 from typing import List
+from pathlib import Path
 from dotenv import load_dotenv
 from langchain_community.document_loaders import UnstructuredPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -9,7 +10,8 @@ from pinecone import Pinecone, ServerlessSpec
 from langchain_core.documents import Document
 
 # Load environment variables
-load_dotenv()
+ROOT_DIR = Path(__file__).parent.parent
+load_dotenv(ROOT_DIR / ".env")
 
 # Configuration
 CHUNK_SIZE = 1000
@@ -191,7 +193,7 @@ class VectorStoreManager:
 
 def run_ingestion_pipeline():
     # Define source directory
-    source_dir = "data"
+    source_dir = str(ROOT_DIR / "data")
     os.makedirs(source_dir, exist_ok=True)
     
     # Initialize components
