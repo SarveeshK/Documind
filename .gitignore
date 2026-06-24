@@ -35,3 +35,8 @@ venv.bak/
 # Pinecone/Local Data
 data/
 presentation_script.md
+
+# Application Caches & Binaries
+cache/
+Ollama/
+OllamaSetup.exe

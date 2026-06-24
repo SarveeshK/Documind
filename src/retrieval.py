@@ -1,7 +1,18 @@
 import os
 from pathlib import Path
-from typing import List, Dict, Any
 from dotenv import load_dotenv
+
+ROOT_DIR = Path(__file__).parent.parent
+load_dotenv(ROOT_DIR / ".env")
+
+# STRICTLY enforce cache directories to S drive before any other imports
+cache_dir = ROOT_DIR / "cache"
+os.environ["HF_HOME"] = str(cache_dir / "huggingface")
+os.environ["SENTENCE_TRANSFORMERS_HOME"] = str(cache_dir / "sentence_transformers")
+os.environ["NLTK_DATA"] = str(cache_dir / "nltk_data")
+os.environ["OLLAMA_MODELS"] = str(cache_dir / "ollama_models")
+
+from typing import List, Dict, Any
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -9,10 +20,6 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough, RunnableBranch
 from pinecone import Pinecone
-
-# Load environment variables
-ROOT_DIR = Path(__file__).parent.parent
-load_dotenv(ROOT_DIR / ".env")
 
 # Configuration
 INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")

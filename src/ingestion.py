@@ -1,17 +1,24 @@
 import os
-import time
-from typing import List
 from pathlib import Path
 from dotenv import load_dotenv
+
+ROOT_DIR = Path(__file__).parent.parent
+load_dotenv(ROOT_DIR / ".env")
+
+# STRICTLY enforce cache directories to S drive before any other imports
+cache_dir = ROOT_DIR / "cache"
+os.environ["HF_HOME"] = str(cache_dir / "huggingface")
+os.environ["SENTENCE_TRANSFORMERS_HOME"] = str(cache_dir / "sentence_transformers")
+os.environ["NLTK_DATA"] = str(cache_dir / "nltk_data")
+os.environ["OLLAMA_MODELS"] = str(cache_dir / "ollama_models")
+
+import time
+from typing import List
 from langchain_community.document_loaders import UnstructuredPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from pinecone import Pinecone, ServerlessSpec
 from langchain_core.documents import Document
-
-# Load environment variables
-ROOT_DIR = Path(__file__).parent.parent
-load_dotenv(ROOT_DIR / ".env")
 
 # Configuration
 CHUNK_SIZE = 1000
